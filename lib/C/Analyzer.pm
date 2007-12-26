@@ -1,6 +1,5 @@
 #!/usr/bin/perl
 package C::Analyzer;
-use strict;
 
 BEGIN {
 	use Exporter ();
@@ -16,9 +15,6 @@ BEGIN {
 
 use strict;
 use warnings;
-use Data::Dumper;
-
-my $VERSION = '0.10';
 
 my %calls       = ();
 my @calls_table = ();
@@ -162,7 +158,13 @@ See Also   :
 
 sub calltree() {
 	my ( $class, $functions ) = @_;
-	my @funclist = @{$functions};
+	my @funclist = ();
+	if ( defined($functions) ) {
+		@funclist = @{$functions};
+	}
+	else {
+		@funclist = qw(main);
+	}
 	foreach my $function (@funclist) {
 		&prepareCalltreeInit( \$function );
 	}
@@ -209,9 +211,8 @@ sub getListOfCFiles() {
 		my $path = $$folder;
 		$path =~ s/\\/\//g;
 		chdir $path;
-		@cfiles = `find \. -name \*.c`;
+		@cfiles = `find \. -name \*.c`;    
 
-		# 		print "@cfiles\n";
 	}
 	if ( ( defined $OS ) && ( $OS eq "linux" ) && ( $$opt eq "dir" ) ) {
 		chdir $$folder;
@@ -313,15 +314,11 @@ sub generateCalltree() {
 				my $str = "";
 				for ( my $i = 0 ; $i < $tabcount ; $i++ ) {
 
-					#print "    ";
 					print "    ";
 					$str = "$str" . "    ";
-
-					#print "    ";
-					$| = 1;
+					$|   = 1;
 				}
 
-				#print "$call\n";
 				if ( $call =~ /^\(/ ) {
 					$call = "__double_def" . "$call";
 					print "<$tabcount>$call\n";
@@ -331,7 +328,6 @@ sub generateCalltree() {
 					print "<$tabcount>$call\n";
 				}
 
-				#print "$call\n";
 				$|         = 1;
 				$temp_call = $call;
 				$temp_call =~ /(\w+)\s*\(/;
@@ -350,15 +346,12 @@ sub generateCalltree() {
 				my $str = "";
 				for ( my $i = 0 ; $i < $tabcount ; $i++ ) {
 
-					#print "    ";
 					print "    ";
 					$str = "$str" . "    ";
 
-					#print "    ";
 					$| = 1;
 				}
 
-				#                print "$call\n";
 				if ( $call =~ /^\(/ ) {
 					$call = "__double_def" . "$call";
 					print "<$tabcount>$call ---@\n";
@@ -368,7 +361,6 @@ sub generateCalltree() {
 					print "<$tabcount>$call\n";
 				}
 
-				#print CALLTREE "<$tabcount>$call ---@\n";
 				my $temp_call = $call;
 				$temp_call =~ /(\w+)\s*\(/;
 				$temp_call = $1;
@@ -451,8 +443,6 @@ sub identifyFunctionsAndCalls() {
 	my $fun_calls;
 	foreach my $ppfile (@$$ppfiles) {
 		$fun_calls = parseCFile( \$ppfile, \$$opt, \$$folder );
-
-		#print Dumper (\$fun_calls);
 		updateHashTable( \$fun_calls );
 	}
 	return;
@@ -524,7 +514,7 @@ sub parseCFile() {
 				$fragment = substr $filename, $filelength;
 				$fragment = "." . "$fragment";
 				if ( $t_fun eq "" ) {
-					print;
+					;
 				}
 				else {
 					$fun = "$t_fun" . "($lno, $fragment)";
@@ -574,62 +564,61 @@ None
 #################### subroutine header end ####################
 
 sub updateHashTable() {
-    my $fun_calls  = shift;
-    my $OpenCount  = 0;
-    my $CloseCount = 0;
-    my $function;
-    my $FUNCTIONFOUND = 0;
-    my $item          = -1;
-    my $titem;
-    my $cnt1 = 0;
-    my $call;
-    my $fun_remain;
+	my $fun_calls  = shift;
+	my $OpenCount  = 0;
+	my $CloseCount = 0;
+	my $function;
+	my $FUNCTIONFOUND = 0;
+	my $item          = -1;
+	my $titem;
+	my $cnt1 = 0;
+	my $call;
+	my $fun_remain;
 
-    foreach my $x (@$$fun_calls) {
-        $item++;
+	foreach my $x (@$$fun_calls) {
+		$item++;
 
-        if ( $x eq "{" ) {
-            $OpenCount++;
-        }
-        if ( $x eq "}" ) {
-            $CloseCount++;
-        }
-        if (   !defined( @$$fun_calls[$item] )
-            || !defined( @$$fun_calls[ $item + 1 ] ) )
-        {
-            next;
-        }
-        $titem = $item + 1;
-        if (   ( @$$fun_calls[$item] =~ /(\w+.*)/ )
-            && ( @$$fun_calls[ $item + 1 ] eq "{" )
-            && ( $OpenCount == $CloseCount ) )
-        {
-            $function = $1;
-            $function =~ /(\w+)\s*\(/;
-            $function   = $1;
-            $function   = trim($function);
-            $fun_remain = $';
-            $fun_remain = "(" . $fun_remain;
-            push( @{ $calls{$function} }, $fun_remain );
-            $FUNCTIONFOUND = 1;
-        }
-        if ( ( $FUNCTIONFOUND == 1 ) && ( $OpenCount != $CloseCount ) ) {
-            if ( ( $x eq "{" ) || ( $x eq "}" ) || ( $x eq ";" ) ) {
-                next;
-            }
-            else {
-                $call = $x;
-                push( @calls_table, $call );
-                $call = trim($call);
-                if ( defined($call) ) {
-                    push( @{ $calls{$function} }, $call );
-                }
-            }
-        }
-    }
+		if ( $x eq "{" ) {
+			$OpenCount++;
+		}
+		if ( $x eq "}" ) {
+			$CloseCount++;
+		}
+		if (   !defined( @$$fun_calls[$item] )
+			|| !defined( @$$fun_calls[ $item + 1 ] ) )
+		{
+			next;
+		}
+		$titem = $item + 1;
+		if (   ( @$$fun_calls[$item] =~ /(\w+.*)/ )
+			&& ( @$$fun_calls[ $item + 1 ] eq "{" )
+			&& ( $OpenCount == $CloseCount ) )
+		{
+			$function = $1;
+			$function =~ /(\w+)\s*\(/;
+			$function   = $1;
+			$function   = trim($function);
+			$fun_remain = $';
+			$fun_remain = "(" . $fun_remain;
+			push( @{ $calls{$function} }, $fun_remain );
+			$FUNCTIONFOUND = 1;
+		}
+		if ( ( $FUNCTIONFOUND == 1 ) && ( $OpenCount != $CloseCount ) ) {
+			if ( ( $x eq "{" ) || ( $x eq "}" ) || ( $x eq ";" ) ) {
+				next;
+			}
+			else {
+				$call = $x;
+				push( @calls_table, $call );
+				$call = trim($call);
+				if ( defined($call) ) {
+					push( @{ $calls{$function} }, $call );
+				}
+			}
+		}
+	}
 
-    #print Dumper (\%calls);
-    return;
+	return;
 }
 
 #################### subroutine header begin ####################
@@ -649,10 +638,10 @@ None
 
 #################### subroutine header end ####################
 sub trim($) {
-    my $string = shift;
-    $string =~ s/^\s+// if defined($string);
-    $string =~ s/\s+$// if defined($string);
-    return $string;
+	my $string = shift;
+	$string =~ s/^\s+// if defined($string);
+	$string =~ s/\s+$// if defined($string);
+	return $string;
 }
 
 #################### subroutine header begin ####################
@@ -672,10 +661,10 @@ None
 
 #################### subroutine header end ####################
 sub clean() {
-    %calls       = ();
-    @calls_table = ();
-    @rec_track   = ();
-    return;
+	%calls       = ();
+	@calls_table = ();
+	@rec_track   = ();
+	return;
 }
 
 #################### subroutine header begin ####################
@@ -696,14 +685,14 @@ None
 #################### subroutine header end ####################
 
 sub progress_bar {
-    my ( $got, $total, $width, $char ) = @_;
-    $width ||= 25;
-    $char  ||= '=';
-    my $num_width = length $total;
-    local $| = 1;
-    printf "[%-${width}s] processed [%${num_width}s/%s] (%.2f%%)\r",
-      $char x ( ( $width - 1 ) * $got / $total ) . '>', $got, $total,
-      100 * $got / +$total;
+	my ( $got, $total, $width, $char ) = @_;
+	$width ||= 25;
+	$char  ||= '=';
+	my $num_width = length $total;
+	local $| = 1;
+	printf "[%-${width}s] processed [%${num_width}s/%s] (%.2f%%)\r",
+	  $char x ( ( $width - 1 ) * $got / $total ) . '>', $got, $total,
+	  100 * $got / +$total;
 }
 #################### main pod documentation begin ###################
 ## Below is the stub of documentation for your module.
@@ -711,13 +700,13 @@ sub progress_bar {
 
 =head1 NAME
 
-C::Analyzer - C Static source code analyzer module, Currently generates only Call Stack
+C::Analyzer - Generates C Call Control Flow tree for C source code
 
 =head1 SYNOPSIS
 
     use warnings;
     use strict;
-    use Analyzer;
+    use C::Analyzer;
 
     my @functions  = qw(afs_CheckServers afs_cv2string);
     my $analyzer   = new Analyzer(
@@ -725,7 +714,8 @@ C::Analyzer - C Static source code analyzer module, Currently generates only Cal
         _cppPath   => "/usr/local/bin",
     );
     $analyzer->init();
-    $analyzer->calltree( \@functions );
+    # "main" function taken if no parameter passed to this method.
+    $analyzer->calltree( \@functions ); 
 
     $analyzer->clean();
 
@@ -806,21 +796,20 @@ None.
 =head1 SUPPORT
 
 The Analyzer is free Open Source software. IT COMES WITHOUT WARRANTY OF ANY KIND.
-There is a need for language analysis tools written in PERL. Please let me know if you could add more features for this module.
-
+Please let me know if you could add more features for this module.I will be more than
+happy to add them.
+	
 =head1 AUTHOR
 
     Sreekanth Kocharlakota
     CPAN ID: bmpOg
     Sreekanth Kocharlakota
-    conflictanalyzer@gmail.com
+    sreekanth@cpan.org
     http://www.languagesemantics.com
 
 =head1 COPYRIGHT
 
 The Analyzer module is Copyright (c) 1994-2007 Sreekanth Kocharlakota. USA.
-All rights reserved.
-
 This program is free software licensed under the...
 
 	The General Public License (GPL)

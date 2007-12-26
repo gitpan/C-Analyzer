@@ -12,5 +12,4 @@ If you are on a windows box you should use 'nmake' rather than 'make'.
 for more details about usage try
 pod2html ./lib/Analyzer.pm > Analyzer.html
 
-Enjoy!
 Sreekanth Kocharlakota
